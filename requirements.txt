@@ -1,0 +1,8 @@
+# Core scientific stack used by M1 (dataset understanding).
+# thrember (the EMBER2024 toolkit) is NOT on PyPI — install it from source,
+# see README.md Step "Setup" for the git clone + pip install . commands.
+
+numpy>=2.0,<3.0
+pandas>=2.2.2
+tqdm>=4.66
+signify==0.9.1

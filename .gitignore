@@ -1,0 +1,30 @@
+# Python virtual environment
+venv/
+.venv/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Downloaded EMBER2024 data — large, never commit
+ml-training/data/**
+!ml-training/data/.gitkeep
+
+# Generated reports — regenerate, don't commit
+ml-training/reports/**
+!ml-training/reports/.gitkeep
+
+# Cloned EMBER2024/thrember toolkit repo — installed per README, not part of this project's own code
+EMBER2024/
+
+# Jupyter checkpoints (if you add notebooks later)
+.ipynb_checkpoints/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+*.swp
