@@ -96,7 +96,9 @@ python ml-training\src\inspect_dataset.py --data-dir ml-training\data --split tr
 ```
 
 Each split gets its own report at `ml-training/reports/m1_dataset_report_<split>.md`,
-plus a per-feature stats CSV.
+plus a per-feature stats CSV. The report covers: sample/feature counts, class
+distribution, missing/infinite values, exact-duplicate feature vectors, and
+per-feature statistics.
 
 ### M1 findings
 
@@ -142,12 +144,12 @@ writes `X_<split>_dedup.dat` / `y_<split>_dedup.dat`.
 training or evaluation, but EMBER2024's official temporal train/test boundary
 itself holds — there is no exact-match leakage between train and test once
 each side is deduplicated internally. This validates using the official split
-as the primary evaluation protocol, per the blueprint's Section 11 methodology,
-with deduplication as a mandatory preprocessing step.
+as the primary evaluation protocol, with deduplication as a mandatory
+preprocessing step.
 
 *(This checks exact-match duplication only. Near-duplicate, family-aware, and
-temporal-boundary leakage are still open, deeper questions for later —
-Section 11's Experiments B/C/D — once the modeling milestones are underway.)*
+temporal-boundary leakage are still open, deeper questions for later, once the
+modeling milestones are underway.)*
 
 ---
 
@@ -170,10 +172,103 @@ Section 11's Experiments B/C/D — once the modeling milestones are underway.)*
 
 ---
 
+## Core ML components (planned)
+
+**1. Malware Detection Model** — classifies a sample as benign or malicious.
+Candidate algorithms: Logistic Regression, Random Forest, XGBoost. The final
+deployed model will be chosen based on actual validation results, not assumed.
+
+**2. Anomaly Detection Model** — flags samples whose characteristics are
+significantly different from the learned data distribution. Candidate
+approaches: Isolation Forest, One-Class SVM, Autoencoder. This is a proxy for
+"worth a closer look," not a claim of zero-day detection.
+
+**3. Malware Family Classifier** — if family labels are usable at sufficient
+volume (EMBER2024's ClarAVy-assigned family tags), classifies malicious
+samples into the families the dataset actually supports — never invented
+categories.
+
+### Explainable AI
+
+Predictions won't just be a bare probability. SHAP will attribute each
+prediction to the specific features that drove it, e.g.:
+
+```
+Malicious: 94%
+Top contributing features:
+  1. Feature A
+  2. Feature B
+  3. Feature C
+```
+
+---
+
+## Planned system architecture
+
+```
+                  React Analyst Dashboard
+                           │
+                           ▼
+                     FastAPI Backend
+                           │
+             ┌─────────────┼─────────────┐
+             ▼             ▼             ▼
+        ML Inference   PostgreSQL    File Analysis
+             │
+       ┌─────┼─────┐
+       ▼     ▼     ▼
+   Malware Anomaly Family
+    Model    Model   Model
+       │     │       │
+       └─────┼───────┘
+             ▼
+          SHAP / XAI
+             │
+             ▼
+        Risk Engine
+             │
+             ▼
+      Threat Assessment
+```
+
+The platform performs **static analysis only**. Uploaded files are never
+executed, at any stage.
+
+## Planned technology stack
+
+| Layer | Tools |
+|---|---|
+| ML | Python, NumPy, Pandas, scikit-learn, XGBoost, SHAP |
+| Backend | FastAPI, Pydantic |
+| Database | PostgreSQL |
+| Frontend | React, Vite, Tailwind CSS |
+| MLOps (where justified) | MLflow, DVC, Docker |
+
+Additional tools/libraries are only introduced when there's a clear technical
+reason — not for buzzword coverage.
+
+## Security principles
+
+- Never executes uploaded or downloaded files, at any stage
+- Never requires disabling antivirus or Windows security features
+- Treats every uploaded file as untrusted input: validated, size-limited,
+  filename-sanitized, protected against path traversal
+- Uses temporary storage with automatic cleanup after analysis
+- No arbitrary command execution based on file contents or user input
+- Dynamic analysis is out of scope for the initial system; if pursued later,
+  it must run inside a properly isolated, disposable sandbox/VM — never on
+  the host machine
+
+---
+
 ## Responsible use
 
 This project is for defensive security research. Results are probabilistic,
 not certain. It is not a replacement for professional malware analysis and
-should not be the sole basis for a security decision. Unknown samples should
-never be executed on personal or production systems — this platform performs
-static analysis only and never executes any uploaded or downloaded file.
+should not be the sole basis for a security decision. Model predictions can
+include false positives, false negatives, dataset bias, and generalization
+error. Unknown samples should never be executed on personal or production
+systems — this platform performs static analysis only and never executes any
+uploaded or downloaded file. The project provides no functionality for
+malware creation, exploitation, persistence, evasion, credential theft,
+unauthorized access, or offensive cyber operations.
