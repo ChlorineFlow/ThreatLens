@@ -2,7 +2,8 @@
 
 > **Status:** Milestone 1 (Dataset Understanding) — Complete
 > Milestone 2 (Data Pipeline: dedup + leakage check) — Complete
-> Next up: Milestone 3 — Malware Detection Model
+> Milestone 3 (Detection Model: LR/RF/XGBoost comparison) — Complete
+> Next up: Milestone 4 — Anomaly Detection Model
 
 An explainable machine-learning platform for static malware detection, anomaly
 analysis, and analyst-facing threat scoring, built on the EMBER2024 dataset
@@ -157,7 +158,7 @@ modeling milestones are underway.)*
 
 - [x] M1 — Dataset Understanding
 - [x] M2 — Data Pipeline (dedup + leakage check)
-- [ ] M3 — Malware Detection Model (Logistic Regression / Random Forest / XGBoost)
+- [x] M3 — Malware Detection Model (Logistic Regression / Random Forest / XGBoost)
 - [ ] M4 — Anomaly Detection Model (Isolation Forest / Autoencoder)
 - [ ] M5 — Malware Family Classifier
 - [ ] M6 — Explainability (SHAP)
@@ -171,6 +172,34 @@ modeling milestones are underway.)*
 - [ ] M14 — Threat Intelligence Graph (optional)
 
 ---
+
+## Milestone 3 — Malware Detection Model
+
+Trained and compared three candidates on the deduplicated `.NET` train/test
+split (260,000 train rows / 59,953 test rows), evaluated with precision,
+recall, F1, ROC-AUC, PR-AUC, confusion matrix, and false positive/negative
+rate — never bare accuracy.
+
+| Model | PR-AUC | ROC-AUC | F1 | FPR | FNR |
+|---|---|---|---|---|---|
+| **XGBoost (selected)** | **0.9978** | **0.9977** | **0.9778** | 2.75% | 1.71% |
+| Random Forest | 0.9949 | 0.9952 | 0.9685 | 3.90% | 2.44% |
+| Logistic Regression | 0.9852 | 0.9865 | 0.9503 | 5.81% | 4.21% |
+
+**Selected model: XGBoost**, chosen on PR-AUC. Its false-negative rate
+(1.71%) is the lowest of the three — the more operationally important of the
+two error rates for malware detection, since a missed detection is typically
+costlier than a false alarm.
+
+**Scope caveat:** these results are from the `.NET` file family only, used
+deliberately as the smallest relevant slice to build and debug the full
+pipeline quickly. They are not assumed to transfer directly to `Win32`/`Win64`
+— those are larger, more diverse, and the actual target for the final
+deployed model. Re-running this same script against `Win32`/`Win64` data is
+planned once the rest of the pipeline (M4–M7) is in place.
+
+Run it yourself: `python ml-training\src\train_detector.py --data-dir ml-training\data`
+Full report: `ml-training/reports/m3_model_comparison.md`
 
 ## Core ML components (planned)
 

@@ -6,3 +6,6 @@ numpy>=2.0,<3.0
 pandas>=2.2.2
 tqdm>=4.66
 signify==0.9.1
+
+# M3 — malware detection model training
+xgboost>=2.0
