@@ -10,3 +10,6 @@ signify==0.9.1
 # M3 — malware detection model training
 xgboost>=2.0
 pyarrow>=15.0
+
+# M6 — explainability
+shap>=0.45
