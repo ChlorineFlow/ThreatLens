@@ -13,3 +13,8 @@ pyarrow>=15.0
 
 # M6 — explainability
 shap>=0.45
+
+# M9 — FastAPI service
+fastapi>=0.115
+uvicorn>=0.30
+python-multipart>=0.0.9
