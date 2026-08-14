@@ -209,6 +209,14 @@ def main() -> int:
     write_report(report_path, thresholds, anomaly_cutoff, tiers, y_test)
     print(f"\nReport written to: {report_path}")
 
+    import json
+    thresholds_path = models_dir / "risk_thresholds.json"
+    thresholds_out = dict(thresholds)
+    thresholds_out["anomaly_cutoff"] = round(anomaly_cutoff, 4)
+    thresholds_out["anomaly_top_pct"] = ANOMALY_TOP_PCT
+    thresholds_path.write_text(json.dumps(thresholds_out, indent=2), encoding="utf-8")
+    print(f"Thresholds saved to: {thresholds_path} (for use by explain.py / analyze_file.py)")
+
     return 0
 
 
