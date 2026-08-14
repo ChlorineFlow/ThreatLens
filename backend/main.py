@@ -1,11 +1,10 @@
 """
-main.py — Milestone 9: FastAPI service
+main.py — Milestone 9 (FastAPI) + Milestone 10 (PostgreSQL)
 
-Exposes the ML pipeline (M3-M8) as a REST API. Storage is in-memory for
-now (a plain dict) -- Milestone 10 replaces this with PostgreSQL. The
-endpoints and their shape are designed so that swap is additive, not a
-rewrite: ANALYSES becomes a database-backed repository, the route
-handlers stay the same.
+Exposes the ML pipeline (M3-M8) as a REST API, now backed by PostgreSQL
+(see database.py, db_models.py) instead of the in-memory dict M9 started
+with. Route shapes are unchanged from M9 -- only the storage layer swapped,
+as planned.
 
 SECURITY NOTES (per blueprint Section 22 -- the upload endpoint is
 itself attack surface):
@@ -20,6 +19,8 @@ itself attack surface):
     parser.
   - The original filename is kept ONLY as a display label in the
     response, never used to construct a filesystem path.
+  - Database credentials come from .env (gitignored), never hardcoded --
+    see database.py.
 
 Run (from the ThreatLens/ directory, with the venv active):
 
@@ -32,11 +33,16 @@ Interactive docs: http://127.0.0.1:8000/docs
 import os
 import sys
 import tempfile
-import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from database import Base, engine, get_db  # noqa: E402
+from db_models import Analysis  # noqa: E402
 
 # Reuse M8's already-tested analyze() function directly, rather than
 # re-implementing the pipeline here.
@@ -51,11 +57,9 @@ app = FastAPI(
     title="ThreatLens API",
     description="Defensive malware intelligence platform -- static analysis only, "
                  "never executes uploaded files.",
-    version="0.1.0",
+    version="0.2.0",
 )
 
-# Permissive for local development; the M11 React dashboard will call this
-# from a different port. Tighten allow_origins before any real deployment.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -63,12 +67,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# In-memory store: analysis_id -> result dict. Replaced by PostgreSQL in M10.
-ANALYSES: dict = {}
+
+@app.on_event("startup")
+def create_tables():
+    # Simple schema creation -- no migration tool (Alembic etc.) yet,
+    # since the schema is still small and single-table. Add one if/when
+    # the schema needs versioned migrations, not preemptively.
+    Base.metadata.create_all(bind=engine)
 
 
 @app.post("/api/analyze")
-async def analyze_endpoint(file: UploadFile = File(...)):
+async def analyze_endpoint(file: UploadFile = File(...), db: Session = Depends(get_db)):
     contents = await file.read()
     size_mb = len(contents) / (1024 * 1024)
     if size_mb > MAX_SIZE_MB:
@@ -88,42 +97,55 @@ async def analyze_endpoint(file: UploadFile = File(...)):
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
 
-    analysis_id = str(uuid.uuid4())
-    result["analysis_id"] = analysis_id
-    result["file_name"] = file.filename  # overwrite the internal temp filename with the real one
-    ANALYSES[analysis_id] = result
+    record = Analysis(
+        file_name=file.filename,
+        sha256=result["sha256"],
+        file_size_bytes=result["file_size_bytes"],
+        classification=result["classification"],
+        malicious_probability=result["malicious_probability"],
+        anomaly_score=result["anomaly_score"],
+        threat_level=result["threat_level"],
+        predicted_family=result.get("predicted_family"),
+        top_contributing_features=result["top_contributing_features"],
+    )
+    db.add(record)
+    db.commit()
+    db.refresh(record)
 
-    return result
+    return record.to_dict()
 
 
 @app.get("/api/analysis/{analysis_id}")
-def get_analysis(analysis_id: str):
-    result = ANALYSES.get(analysis_id)
-    if result is None:
+def get_analysis(analysis_id: str, db: Session = Depends(get_db)):
+    record = db.query(Analysis).filter(Analysis.id == analysis_id).first()
+    if record is None:
         raise HTTPException(status_code=404, detail="Analysis not found.")
-    return result
+    return record.to_dict()
 
 
 @app.get("/api/analysis/{analysis_id}/explanation")
-def get_explanation(analysis_id: str):
-    result = ANALYSES.get(analysis_id)
-    if result is None:
+def get_explanation(analysis_id: str, db: Session = Depends(get_db)):
+    record = db.query(Analysis).filter(Analysis.id == analysis_id).first()
+    if record is None:
         raise HTTPException(status_code=404, detail="Analysis not found.")
     return {
         "analysis_id": analysis_id,
-        "top_contributing_features": result.get("top_contributing_features", []),
+        "top_contributing_features": record.top_contributing_features,
     }
 
 
 @app.get("/api/statistics")
-def get_statistics():
-    total = len(ANALYSES)
-    malicious = sum(1 for r in ANALYSES.values() if r.get("classification") == "MALICIOUS")
+def get_statistics(db: Session = Depends(get_db)):
+    total = db.query(Analysis).count()
+    malicious = db.query(Analysis).filter(Analysis.classification == "MALICIOUS").count()
     benign = total - malicious
-    tier_counts: dict = {}
-    for r in ANALYSES.values():
-        tier = r.get("threat_level", "UNKNOWN")
-        tier_counts[tier] = tier_counts.get(tier, 0) + 1
+
+    tier_rows = (
+        db.query(Analysis.threat_level, func.count(Analysis.id))
+        .group_by(Analysis.threat_level)
+        .all()
+    )
+    tier_counts = {tier: count for tier, count in tier_rows}
 
     return {
         "total_analyses": total,

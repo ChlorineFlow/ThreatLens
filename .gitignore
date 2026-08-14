@@ -31,3 +31,4 @@ Thumbs.db
 # Trained model artifacts — large, regenerable from the training scripts
 ml-training/models/**
 !ml-training/models/.gitkeep
+.env
