@@ -114,6 +114,15 @@ async def analyze_endpoint(file: UploadFile = File(...), db: Session = Depends(g
 
     return record.to_dict()
 
+@app.get("/api/analyses")
+def list_analyses(limit: int = 50, db: Session = Depends(get_db)):
+    records = (
+        db.query(Analysis)
+        .order_by(Analysis.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return [r.to_dict() for r in records]
 
 @app.get("/api/analysis/{analysis_id}")
 def get_analysis(analysis_id: str, db: Session = Depends(get_db)):

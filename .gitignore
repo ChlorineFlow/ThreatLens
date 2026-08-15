@@ -32,3 +32,7 @@ Thumbs.db
 ml-training/models/**
 !ml-training/models/.gitkeep
 .env
+# React/Vite frontend generated files
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
