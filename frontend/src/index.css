@@ -1,1 +1,51 @@
 @import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-sans: 'IBM Plex Sans', ui-sans-serif, sans-serif;
+
+  --bg: #F2F4F7;
+  --surface: #FFFFFF;
+  --border: #DCE1E8;
+  --ink: #0F172A;
+  --ink-muted: #5B6472;
+  --signal: #2F6FED;
+  --amber: #C97A17;
+}
+
+.dark {
+  --bg: #0A0F1A;
+  --surface: #121826;
+  --border: #232C3D;
+  --ink: #E7ECF3;
+  --ink-muted: #8B96A8;
+  --signal: #4C8DFF;
+  --amber: #F5A623;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-border: var(--border);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-signal: var(--signal);
+  --color-amber: var(--amber);
+  --font-display: var(--font-mono);
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
