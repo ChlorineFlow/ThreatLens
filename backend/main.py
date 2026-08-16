@@ -33,6 +33,7 @@ Interactive docs: http://127.0.0.1:8000/docs
 import os
 import sys
 import tempfile
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
@@ -53,11 +54,22 @@ MODELS_DIR = str(Path(__file__).resolve().parent.parent / "ml-training" / "model
 MAX_SIZE_MB = 100.0
 TOP_K = 5
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Simple schema creation -- no migration tool (Alembic etc.) yet,
+    # since the schema is still small and single-table. Add one if/when
+    # the schema needs versioned migrations, not preemptively.
+    Base.metadata.create_all(bind=engine)
+    yield
+
+
 app = FastAPI(
     title="ThreatLens API",
     description="Defensive malware intelligence platform -- static analysis only, "
                  "never executes uploaded files.",
     version="0.2.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -66,14 +78,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.on_event("startup")
-def create_tables():
-    # Simple schema creation -- no migration tool (Alembic etc.) yet,
-    # since the schema is still small and single-table. Add one if/when
-    # the schema needs versioned migrations, not preemptively.
-    Base.metadata.create_all(bind=engine)
 
 
 @app.post("/api/analyze")

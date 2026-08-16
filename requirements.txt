@@ -23,3 +23,6 @@ python-multipart>=0.0.9
 sqlalchemy>=2.0
 psycopg2-binary>=2.9
 python-dotenv>=1.0
+
+# M12 — testing
+pytest>=8.0
