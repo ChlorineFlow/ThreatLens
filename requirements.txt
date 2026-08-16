@@ -26,3 +26,7 @@ python-dotenv>=1.0
 
 # M12 — testing
 pytest>=8.0
+
+# M14 — threat intelligence graph (optional)
+networkx>=3.2
+matplotlib>=3.8

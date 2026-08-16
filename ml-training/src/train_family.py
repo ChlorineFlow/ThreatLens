@@ -139,7 +139,12 @@ def main() -> int:
 
     print("\nTraining Random Forest family classifier ...")
     clf = RandomForestClassifier(
-        n_estimators=200, n_jobs=-1, random_state=42, class_weight="balanced"
+        n_estimators=150,
+        max_depth=25,
+        min_samples_leaf=5,
+        n_jobs=-1,
+        random_state=42,
+        class_weight="balanced",
     )
     clf.fit(X_train, y_train_enc)
 
