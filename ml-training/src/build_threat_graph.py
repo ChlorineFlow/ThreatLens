@@ -213,7 +213,7 @@ def main() -> int:
     parser.add_argument("--data-dir", required=True)
     parser.add_argument("--subset", default="test_dedup")
     parser.add_argument("--n-samples", type=int, default=200)
-    parser.add_argument("--similarity-threshold", type=float, default=0.4)
+    parser.add_argument("--similarity-threshold", type=float, default=0.6)
     parser.add_argument("--models-dir", default="ml-training/models")
     parser.add_argument("--reports-dir", default="ml-training/reports")
     args = parser.parse_args()
@@ -263,6 +263,12 @@ def main() -> int:
     graphml_path = reports_dir / "m14_threat_graph.graphml"
     nx.write_graphml(G, graphml_path)
     print(f"\nGraph saved to: {graphml_path}")
+
+    # JSON export (node-link format) for the frontend's interactive graph view.
+    graph_json = nx.node_link_data(G, edges="links")
+    json_path = reports_dir / "m14_threat_graph.json"
+    json_path.write_text(json.dumps(graph_json), encoding="utf-8")
+    print(f"Graph JSON (for the dashboard) saved to: {json_path}")
 
     viz_path = reports_dir / "m14_threat_graph.png"
     save_visualization(G, viz_path)

@@ -79,7 +79,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @app.post("/api/analyze")
 async def analyze_endpoint(file: UploadFile = File(...), db: Session = Depends(get_db)):
     contents = await file.read()
@@ -185,6 +184,18 @@ def get_models():
                            "regarding Win32/Win64 generalization.",
     }
 
+@app.get("/api/graph")
+def get_graph():
+    import json as json_module
+
+    graph_path = Path(MODELS_DIR).parent / "reports" / "m14_threat_graph.json"
+    if not graph_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="No threat graph generated yet. Run "
+                   "ml-training/src/build_threat_graph.py first.",
+        )
+    return json_module.loads(graph_path.read_text(encoding="utf-8"))
 
 @app.get("/")
 def root():

@@ -5,6 +5,7 @@ import {
 } from 'recharts'
 import ParticleBackground from './components/ParticleBackground'
 import ThemeToggle from './components/ThemeToggle'
+import GraphTab from './components/GraphTab'
 
 const TIER_STYLES = {
   LOW: 'bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800',
@@ -433,6 +434,7 @@ const TABS = [
   { id: 'dashboard', label: 'Dashboard', component: StatisticsTab },
   { id: 'analyze', label: 'Analyze Sample', component: AnalyzeTab },
   { id: 'history', label: 'History', component: HistoryTab },
+  { id: 'graph', label: 'Threat Graph', component: GraphTab },
   { id: 'models', label: 'Models', component: ModelsTab },
 ]
 
