@@ -1,6 +1,7 @@
 # ThreatLens — AI-Powered Malware Intelligence & Threat Analysis Platform
 
-> **Status:** Milestones 1–14 complete (M14 is the blueprint's optional advanced phase).
+> **Status:** Milestones 1–14 complete (M14 is the blueprint's optional advanced phase),
+> plus M15 — adversarial robustness testing (bonus, beyond the original blueprint).
 > Current scope: trained and validated on the EMBER2024 `.NET` file-type slice.
 > Win32/Win64 generalization validation is planned as a follow-up (see **Known limitations** below).
 
@@ -378,6 +379,51 @@ external tools), a static visualization, and a summary report.
 
 ---
 
+## Milestone 15 — Adversarial Robustness Testing
+
+```powershell
+python ml-training\src\adversarial_robustness_test.py --data-dir ml-training\data
+```
+
+Directly follows up on the M6 SHAP finding that the detector leans heavily
+on `HeaderFileInfo[43]`: rather than leaving that as an interpretability
+observation, this milestone tests whether it's an actual, exploitable
+evasion vector.
+
+**Experiment 1 — single-feature perturbation.** For real malicious test
+samples, `HeaderFileInfo[43]` was set to its typical benign value (leaving
+every other feature untouched) and the sample rescored.
+
+| Metric | Result |
+|---|---|
+| Samples tested | 29,425 |
+| Flipped to BENIGN | 4,361 (**14.82%**) |
+| Mean confidence before | 98.5% |
+| Mean confidence after | 82.77% |
+
+**Experiment 2 — epsilon-ball robustness curve.** Bounded perturbation
+across the feature space, at increasing budgets:
+
+| Epsilon | Flip rate |
+|---|---|
+| 0.10 | 4.64% |
+| 0.25 | 6.61% |
+| 0.50 | 7.86% |
+| 1.00 | 10.48% |
+| 2.00 | 19.92% |
+
+**Finding:** the model's known reliance on one feature is a real, measurable
+evasion vector — changing that single structural value, without altering a
+file's actual malicious behavior, flips ~15% of confident malicious
+predictions to benign. The epsilon-curve's smooth, monotonic increase
+(more perturbation → more evasion, no anomalous jumps) is itself evidence
+the test methodology is behaving correctly. This converts an
+interpretability observation (M6) into a quantified, tested limitation —
+exactly the kind of finding that should be disclosed rather than
+discovered by someone else asking "is this robust?"
+
+---
+
 ## Known limitations
 
 - **Training scope is `.NET` only.** Deliberately chosen to validate the
@@ -387,9 +433,11 @@ external tools), a static visualization, and a summary report.
   understood, not hidden. Win32/Win64 retraining uses the identical scripts
   (`--train-subset`/`--test-subset` are generic) and is the natural next
   step, deferred for time/compute cost (Win32 train alone is 23.7 GB).
-- **`HeaderFileInfo[43]` dominates the detector's predictions** (M6). Not
-  yet tested: retraining with that feature removed/downweighted, to confirm
-  whether the model is robust without it.
+- **`HeaderFileInfo[43]` dominates the detector's predictions** (M6) — and
+  M15 confirmed this is a real, exploitable evasion vector: perturbing just
+  this feature flips ~15% of confident malicious predictions to benign
+  (see Milestone 15). A production system would need either adversarial
+  training or feature-level hardening to address this.
 - **No hyperparameter search was performed** — model configs (XGBoost's
   `max_depth=6`, Random Forest's `n_estimators`, etc.) are reasonable
   defaults, not the output of a tuning process.
